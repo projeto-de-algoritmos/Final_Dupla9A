@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        function knapsack(inputSet, capacity) {
+            let rows = inputSet.length-1;
+            let cols = capacity;
+
+            let table = [];
+            for (let i = 0; i <= rows; i++) {
+                table[i] = [];
+                table[i][0] = 0;
+            }
+            for (let i = 0; i <= cols; i++) {
+                table[0][i] = 0;
+            }
+            for (let i = 1; i <= rows; i++) {
+                console.log(i);
+                for (let w = 1; w <= cols; w++) {
+                    if (inputSet[i].weight > w) {
+                        table[i][w] = table[i-1][w];
+                    } else {
+                        let prevValue = table[i-1][w];
+                        let newValue = inputSet[i].value + table[i-1][w-inputSet[i].weight];
+                        table[i][w] = Math.max(prevValue, newValue);
+                    }
+                }
+            }
+
+
+            printSolution(inputSet, capacity, table);
+        }
+
+        function printSolution(inputSet, capacity, table) {
+            let solution = [];
+            
+            let result = table[inputSet.length - 1][capacity];
+            let weight = capacity;
+
+            for (let i = (inputSet.length - 1); i > 0 && result > 0; i--) {
+                if (result == table[i-1][weight]) {
+                    continue;
+                } else {
+                    solution.push(inputSet[i]);
+
+                    result = result - inputSet[i].value;
+                    weight = weight - inputSet[i].weight;
+                }
+            }
+
+            console.log(solution);
+        }
+
+        window.onload = () => {
+            let ipt = [
+                null,
+                {
+                    value: 1,
+                    weight: 1
+                },
+                {
+                    value: 6,
+                    weight: 2
+                },
+                {
+                    value: 18,
+                    weight: 5
+                },
+                {
+                    value: 22,
+                    weight: 6
+                },
+                {
+                    value: 28,
+                    weight: 7
+                }
+            ];
+            console.log(knapsack(ipt, 11));
+        }
+    </script>
+</body>
+</html>
