@@ -1,87 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=, initial-scale=1.0">
     <title>Document</title>
 </head>
-<body>
-    <script>
-        function knapsack(inputSet, capacity) {
-            let rows = inputSet.length-1;
-            let cols = capacity;
 
-            let table = [];
-            for (let i = 0; i <= rows; i++) {
-                table[i] = [];
-                table[i][0] = 0;
+<body>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
+      integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+    <script src="{{ url_for('static', filename='locations.js') }}"></script>
+    <script type="text/javascript" charset="utf-8">
+        let socket = io();
+        socket.on('update', function (data) {
+          showRoute(data.ids);
+        });
+      </script>
+    <script>
+        let routes = {};
+
+        function showRoute(subroutes) {
+            for (let i = 0; i < subroutes.length; i++) {
+                console.log(routes[subroutes[i]]);
             }
-            for (let i = 0; i <= cols; i++) {
-                table[0][i] = 0;
+        }
+
+        async function buildRoutes() {
+            let graph = [];
+            let baseUrl = "http://router.project-osrm.org/route/v1/driving";
+
+            for (let i = 0; i < locations.length - 1; i++) {
+                url = `${baseUrl}/${locations[i].lng},${locations[i].lat};${locations[i + 1].lng},${locations[i + 1].lat}`;
+                await fetch(url).then((r) => {
+                    return r.json()
+                }).then((json) => {
+                    graph.push({
+                        city1: locations[i].id,
+                        city2: locations[i+1].id,
+                        interval: Math.round(json.routes[0].distance)
+                    })
+                    let routeId = `${locations[i].id}${locations[i+1].id}`;
+                    routes[routeId] = json.routes[0].geometry;
+                });
             }
-            for (let i = 1; i <= rows; i++) {
-                console.log(i);
-                for (let w = 1; w <= cols; w++) {
-                    if (inputSet[i].weight > w) {
-                        table[i][w] = table[i-1][w];
-                    } else {
-                        let prevValue = table[i-1][w];
-                        let newValue = inputSet[i].value + table[i-1][w-inputSet[i].weight];
-                        table[i][w] = Math.max(prevValue, newValue);
+            return graph;
+        }
+
+        async function sendGraph() {
+            graph = await buildRoutes();
+            console.log(graph);
+            socket.emit('solve', { graph: graph, start: "r1", goal: "h1"});
+        }
+
+
+            function knapsack(inputSet, capacity) {
+                let rows = inputSet.length - 1;
+                let cols = capacity;
+
+                let table = [];
+                for (let i = 0; i <= rows; i++) {
+                    table[i] = [];
+                    table[i][0] = 0;
+                }
+                for (let i = 0; i <= cols; i++) {
+                    table[0][i] = 0;
+                }
+                for (let i = 1; i <= rows; i++) {
+                    console.log(i);
+                    for (let w = 1; w <= cols; w++) {
+                        if (inputSet[i].weight > w) {
+                            table[i][w] = table[i - 1][w];
+                        } else {
+                            let prevValue = table[i - 1][w];
+                            let newValue = inputSet[i].value + table[i - 1][w - inputSet[i].weight];
+                            table[i][w] = Math.max(prevValue, newValue);
+                        }
                     }
                 }
+
+
+                printSolution(inputSet, capacity, table);
             }
 
+            function printSolution(inputSet, capacity, table) {
+                let solution = [];
 
-            printSolution(inputSet, capacity, table);
-        }
+                let result = table[inputSet.length - 1][capacity];
+                let weight = capacity;
 
-        function printSolution(inputSet, capacity, table) {
-            let solution = [];
-            
-            let result = table[inputSet.length - 1][capacity];
-            let weight = capacity;
+                for (let i = (inputSet.length - 1); i > 0 && result > 0; i--) {
+                    if (result == table[i - 1][weight]) {
+                        continue;
+                    } else {
+                        solution.push(inputSet[i]);
 
-            for (let i = (inputSet.length - 1); i > 0 && result > 0; i--) {
-                if (result == table[i-1][weight]) {
-                    continue;
-                } else {
-                    solution.push(inputSet[i]);
-
-                    result = result - inputSet[i].value;
-                    weight = weight - inputSet[i].weight;
+                        result = result - inputSet[i].value;
+                        weight = weight - inputSet[i].weight;
+                    }
                 }
+
+                console.log(solution);
             }
 
-            console.log(solution);
-        }
-
-        window.onload = () => {
-            let ipt = [
-                null,
-                {
-                    value: 1,
-                    weight: 1
-                },
-                {
-                    value: 6,
-                    weight: 2
-                },
-                {
-                    value: 18,
-                    weight: 5
-                },
-                {
-                    value: 22,
-                    weight: 6
-                },
-                {
-                    value: 28,
-                    weight: 7
-                }
-            ];
-            console.log(knapsack(ipt, 11));
-        }
+            window.onload = () => {
+                // let ipt = [
+                //     null,
+                //     {
+                //         value: 1,
+                //         weight: 1
+                //     },
+                //     {
+                //         value: 6,
+                //         weight: 2
+                //     },
+                //     {
+                //         value: 18,
+                //         weight: 5
+                //     },
+                //     {
+                //         value: 22,
+                //         weight: 6
+                //     },
+                //     {
+                //         value: 28,
+                //         weight: 7
+                //     }
+                // ];
+                // console.log(knapsack(ipt, 11));
+                sendGraph();
+            }
     </script>
 </body>
+
 </html>
