@@ -17,6 +17,7 @@
 
 <body>
     <h2>My Map</h2>
+    <button onclick="sendGraph()">Resolver</button>
     <div id="map" class="map"></div>
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
         integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
@@ -30,6 +31,7 @@
     </script>
     <script>
         let routes = {};
+        let startAndGoal = [];
         let iconUrl = 'http://cdn.rawgit.com/openlayers/ol3/master/examples/data/icon.png';
         let vectorSource = new ol.source.Vector();
         let vectorLayer = new ol.layer.Vector({
@@ -80,16 +82,34 @@
             })
         });
 
+        var featureListener = function ( event ) {
+            startAndGoal.push(event);
+            console.log(startAndGoal);
+        };
+
+        map.on('click', function(event) {
+            map.forEachFeatureAtPixel(event.pixel, function(feature,layer) {
+                if(startAndGoal.length < 2){
+                    featureListener(feature.getId())      
+                }
+            });
+        });
+
         function selectPoints(solutionPoints, locations) {
             let filteredPoints = solutionPoints.map((point) => {
                 return locations.filter((location) => {
                     return location.id === point
                 })[0];
             });
-            knapsack(filteredPoints, 30);
+            let filteredRestaurants = filteredPoints.filter((point) => {
+                return point.id.charAt(0) == 'r';
+            })
+            knapsack(filteredRestaurants, 30);
         }
 
         function showRoute(subroutes) {
+            console.log(subroutes);
+            console.log(routes);
             for (let i = 0; i < subroutes.length; i++) {
                 var route = new ol.format.Polyline({
                     factor: 1e5
@@ -118,12 +138,13 @@
             });
             for (var i = 0; i < coords.length; i++) {
                 coords[i] = ol.proj.fromLonLat(coords[i]);
+                var feature = new ol.Feature({
+                    geometry: new ol.geom.Point(coords[i])
+                });
+                feature.setId(points[i].id);
+                feature.setStyle(style);
+                vectorSource.addFeature(feature);
             }
-            var feature = new ol.Feature({
-                geometry: new ol.geom.MultiPoint(coords)
-            });
-            feature.setStyle(style);
-            vectorSource.addFeature(feature);
         }
 
         function assignWeightsAndValues(locations) {
@@ -150,28 +171,28 @@
                         city2: locations[i + 1].id,
                         interval: Math.round(json.routes[0].distance)
                     })
-                    let routeId = `${locations[i].id}${locations[i + 1].id}`;
+                    let routeId = `${locations[i+1].id}${locations[i].id}`;
                     routes[routeId] = json.routes[0].geometry;
                 });
             }
             return graph;
         }
 
-        async function sendGraph() {
+        async function init() {
             assignWeightsAndValues(locations);
             let houses = filterLocations(locations, 'h');
             let restaurants = filterLocations(locations, 'r');
             drawMarkers(houses, styles.house);
             drawMarkers(restaurants, styles.restaurant);
+        }
+
+        async function sendGraph(){
             graph = await buildRoutes();
-            socket.emit('solve', { graph: graph, start: "r1", goal: "h1" });
+            socket.emit('solve', { graph: graph, start: startAndGoal[0], goal: startAndGoal[1] });
         }
 
 
         function knapsack(inputSet, capacity) {
-            console.log(inputSet);
-            console.log(capacity);
-
             let rows = inputSet.length - 1;
             let cols = capacity;
 
@@ -194,7 +215,6 @@
                     }
                 }
             }
-
 
             printSolution(inputSet, capacity, table);
         }
@@ -232,31 +252,7 @@
         }
 
         window.onload = () => {
-            // let ipt = [
-            //     null,
-            //     {
-            //         value: 1,
-            //         weight: 1
-            //     },
-            //     {
-            //         value: 6,
-            //         weight: 2
-            //     },
-            //     {
-            //         value: 18,
-            //         weight: 5
-            //     },
-            //     {
-            //         value: 22,
-            //         weight: 6
-            //     },
-            //     {
-            //         value: 28,
-            //         weight: 7
-            //     }
-            // ];
-            // console.log(knapsack(ipt, 11));
-            sendGraph();
+            init();
         }
     </script>
 </body>
