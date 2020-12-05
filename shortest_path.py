@@ -55,6 +55,7 @@ def dijkstra(graph, start, target, socketio):
 def create_path(start, goal, graph, socketio):
     distances = dijkstra(graph, start, goal,socketio)  
     ids = []
+    points = []
 
     if not (distances):
         socketio.emit('update', {'ids': []})
@@ -64,20 +65,19 @@ def create_path(start, goal, graph, socketio):
     path = []
     path.append(distances[goal])
 
+    
     while node:
         path.append(distances[node])
         node = distances[node]['previous_node']
 
-    print(path)
-
+    points.append(goal)
+    ids.append(distances[goal]['previous_node']+goal)
     for i in range(0, len(path)-1):
-        print(path[i])
-        print(path[i+1])
         if path[i+1]['previous_node'] is not None:
             ids.append(path[i+1]['previous_node']+path[i]['previous_node'])
+        points.append(path[i]['previous_node'])
     
-    print(ids)
-    socketio.emit('update', {'ids': ids})
+    socketio.emit('update', {'ids': ids, 'points': points})
     return path
 
 def build_and_solve(graph_data, start, goal, socketio):
@@ -90,4 +90,4 @@ def build_and_solve(graph_data, start, goal, socketio):
         create_edge(graph, node1, node2, interval)
         create_edge(graph, node2, node1, interval)
 
-    print(create_path(start, goal, graph, socketio))
+    create_path(start, goal, graph, socketio)

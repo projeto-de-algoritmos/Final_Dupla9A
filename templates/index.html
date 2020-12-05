@@ -19,17 +19,18 @@
     <h2>My Map</h2>
     <div id="map" class="map"></div>
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
-      integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+        integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
     <script src="{{ url_for('static', filename='locations.js') }}"></script>
     <script type="text/javascript" charset="utf-8">
         let socket = io();
         socket.on('update', function (data) {
-          showRoute(data.ids);
+            showRoute(data.ids);
+            selectPoints(data.points, locations);
         });
-      </script>
+    </script>
     <script>
         let routes = {};
-
+        let iconUrl = 'http://cdn.rawgit.com/openlayers/ol3/master/examples/data/icon.png';
         let vectorSource = new ol.source.Vector();
         let vectorLayer = new ol.layer.Vector({
             source: vectorSource
@@ -39,7 +40,31 @@
                 stroke: new ol.style.Stroke({
                     width: 6, color: [40, 40, 40, 0.8]
                 })
-            })
+            }),
+            icon: new ol.style.Style({
+                image: new ol.style.Icon({
+                    anchor: [0.5, 1],
+                    src: iconUrl
+                })
+            }),
+            house: new ol.style.Style({
+                image: new ol.style.Circle({
+                    radius: 7,
+                    fill: new ol.style.Fill({ color: 'black' }),
+                    stroke: new ol.style.Stroke({
+                        color: [255, 0, 0], width: 2
+                    })
+                })
+            }),
+            restaurant: new ol.style.Style({
+                image: new ol.style.Circle({
+                    radius: 7,
+                    fill: new ol.style.Fill({ color: 'black' }),
+                    stroke: new ol.style.Stroke({
+                        color: [255, 255, 255], width: 2
+                    })
+                })
+            }),
         };
         let map = new ol.Map({
             target: 'map',
@@ -55,6 +80,14 @@
             })
         });
 
+        function selectPoints(solutionPoints, locations) {
+            let filteredPoints = solutionPoints.map((point) => {
+                return locations.filter((location) => {
+                    return location.id === point
+                })[0];
+            });
+            knapsack(filteredPoints, 30);
+        }
 
         function showRoute(subroutes) {
             for (let i = 0; i < subroutes.length; i++) {
@@ -73,6 +106,36 @@
             }
         }
 
+        function filterLocations(locations, type) {
+            return locations.filter((location) => {
+                return location.id.charAt(0) === type;
+            })
+        }
+
+        function drawMarkers(points, style) {
+            let coords = points.map((location) => {
+                return [location.lng, location.lat]
+            });
+            for (var i = 0; i < coords.length; i++) {
+                coords[i] = ol.proj.fromLonLat(coords[i]);
+            }
+            var feature = new ol.Feature({
+                geometry: new ol.geom.MultiPoint(coords)
+            });
+            feature.setStyle(style);
+            vectorSource.addFeature(feature);
+        }
+
+        function assignWeightsAndValues(locations) {
+            for (let i = 0; i < locations.length; i++) {
+                let weight = Math.floor(Math.random() * 30) + 1;
+                let value = Math.floor(Math.random() * 100) + 1;
+                locations[i].weight = weight;
+                locations[i].value = value;
+            }
+            console.log(locations);
+        }
+
         async function buildRoutes() {
             let graph = [];
             let baseUrl = "http://router.project-osrm.org/route/v1/driving";
@@ -84,10 +147,10 @@
                 }).then((json) => {
                     graph.push({
                         city1: locations[i].id,
-                        city2: locations[i+1].id,
+                        city2: locations[i + 1].id,
                         interval: Math.round(json.routes[0].distance)
                     })
-                    let routeId = `${locations[i].id}${locations[i+1].id}`;
+                    let routeId = `${locations[i].id}${locations[i + 1].id}`;
                     routes[routeId] = json.routes[0].geometry;
                 });
             }
@@ -95,13 +158,20 @@
         }
 
         async function sendGraph() {
+            assignWeightsAndValues(locations);
+            let houses = filterLocations(locations, 'h');
+            let restaurants = filterLocations(locations, 'r');
+            drawMarkers(houses, styles.house);
+            drawMarkers(restaurants, styles.restaurant);
             graph = await buildRoutes();
-            console.log(graph);
-            socket.emit('solve', { graph: graph, start: "r1", goal: "h1"});
+            socket.emit('solve', { graph: graph, start: "r1", goal: "h1" });
         }
 
 
         function knapsack(inputSet, capacity) {
+            console.log(inputSet);
+            console.log(capacity);
+
             let rows = inputSet.length - 1;
             let cols = capacity;
 
@@ -114,7 +184,6 @@
                 table[0][i] = 0;
             }
             for (let i = 1; i <= rows; i++) {
-                console.log(i);
                 for (let w = 1; w <= cols; w++) {
                     if (inputSet[i].weight > w) {
                         table[i][w] = table[i - 1][w];
@@ -128,6 +197,18 @@
 
 
             printSolution(inputSet, capacity, table);
+        }
+
+        function addSolutionMarkers(solution) {
+            for (let i = 0; i < solution.length; i++) {
+                let coord = [solution[i].lng, solution[i].lat]
+                let feature = new ol.Feature({
+                    type: 'place',
+                    geometry: new ol.geom.Point(ol.proj.fromLonLat(coord))
+                });
+                feature.setStyle(styles.icon);
+                vectorSource.addFeature(feature);
+            }
         }
 
         function printSolution(inputSet, capacity, table) {
@@ -147,7 +228,7 @@
                 }
             }
 
-            console.log(solution);
+            addSolutionMarkers(solution);
         }
 
         window.onload = () => {
