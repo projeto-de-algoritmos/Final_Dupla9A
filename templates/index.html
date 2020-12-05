@@ -22,6 +22,7 @@
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
         integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
     <script src="{{ url_for('static', filename='locations.js') }}"></script>
+    <script src="{{ url_for('static', filename='graph.js') }}"></script>
     <script type="text/javascript" charset="utf-8">
         let socket = io();
         socket.on('update', function (data) {
@@ -84,7 +85,6 @@
 
         var featureListener = function ( event ) {
             startAndGoal.push(event);
-            console.log(startAndGoal);
         };
 
         map.on('click', function(event) {
@@ -104,13 +104,16 @@
             let filteredRestaurants = filteredPoints.filter((point) => {
                 return point.id.charAt(0) == 'r';
             })
+            console.log('filteredRestaurants' + JSON.stringify(filteredRestaurants));
             knapsack(filteredRestaurants, 30);
         }
 
         function showRoute(subroutes) {
-            console.log(subroutes);
-            console.log(routes);
             for (let i = 0; i < subroutes.length; i++) {
+                if(routes[subroutes[i]] == undefined){
+                    let str = subroutes[i][2] + subroutes[i][3] + subroutes[i][0] + subroutes[i][1];
+                    subroutes[i] = str;
+                }
                 var route = new ol.format.Polyline({
                     factor: 1e5
                 }).readGeometry(routes[subroutes[i]], {
@@ -154,27 +157,34 @@
                 locations[i].weight = weight;
                 locations[i].value = value;
             }
-            console.log(locations);
         }
 
         async function buildRoutes() {
             let graph = [];
             let baseUrl = "http://router.project-osrm.org/route/v1/driving";
+            
+            for (let i = 0; i < g.length; i++) {
+                let city1 = locations.find((l) => {
+                    return l.id == g[i].city1
+                });
+                let city2 = locations.find((l) => {
+                    return l.id == g[i].city2
+                });
 
-            for (let i = 0; i < locations.length - 1; i++) {
-                url = `${baseUrl}/${locations[i].lng},${locations[i].lat};${locations[i + 1].lng},${locations[i + 1].lat}`;
+                let url = `${baseUrl}/${city1.lng},${city1.lat};${city2.lng},${city2.lat}`;
                 await fetch(url).then((r) => {
                     return r.json()
                 }).then((json) => {
                     graph.push({
-                        city1: locations[i].id,
-                        city2: locations[i + 1].id,
+                        city1: g[i].city1,
+                        city2: g[i].city2,
                         interval: Math.round(json.routes[0].distance)
                     })
-                    let routeId = `${locations[i+1].id}${locations[i].id}`;
+                    let routeId = `${g[i].city1}${g[i].city2}`;
                     routes[routeId] = json.routes[0].geometry;
                 });
             }
+            
             return graph;
         }
 
