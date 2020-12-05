@@ -18,6 +18,7 @@
 <body>
     <h2>My Map</h2>
     <button onclick="sendGraph()">Resolver</button>
+    <button onclick="reset()">Resetar</button>
     <div id="map" class="map"></div>
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
         integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
@@ -104,8 +105,13 @@
             let filteredRestaurants = filteredPoints.filter((point) => {
                 return point.id.charAt(0) == 'r';
             })
-            console.log('filteredRestaurants' + JSON.stringify(filteredRestaurants));
             knapsack(filteredRestaurants, 30);
+        }
+
+        function reset(){
+            startAndGoal = [];
+
+            init();
         }
 
         function showRoute(subroutes) {
@@ -189,6 +195,7 @@
         }
 
         async function init() {
+            vectorSource.clear();
             assignWeightsAndValues(locations);
             let houses = filterLocations(locations, 'h');
             let restaurants = filterLocations(locations, 'r');
