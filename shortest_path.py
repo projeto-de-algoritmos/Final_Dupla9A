@@ -74,10 +74,10 @@ def create_path(start, goal, graph, socketio):
         print(path[i])
         print(path[i+1])
         if path[i+1]['previous_node'] is not None:
-            ids.append(path[i]['previous_node']+path[i+1]['previous_node'])
+            ids.append(path[i+1]['previous_node']+path[i]['previous_node'])
     
     print(ids)
-    # socketio.emit('update', {'ids': ids})
+    socketio.emit('update', {'ids': ids})
     return path
 
 def build_and_solve(graph_data, start, goal, socketio):

@@ -4,10 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=, initial-scale=1.0">
-    <title>Document</title>
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.4.3/css/ol.css" type="text/css">
+    <style>
+        .map {
+            height: 1000px;
+            width: 100%;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.4.3/build/ol.js"></script>
 </head>
 
 <body>
+    <h2>My Map</h2>
+    <div id="map" class="map"></div>
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
       integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
     <script src="{{ url_for('static', filename='locations.js') }}"></script>
@@ -20,9 +30,46 @@
     <script>
         let routes = {};
 
+        let vectorSource = new ol.source.Vector();
+        let vectorLayer = new ol.layer.Vector({
+            source: vectorSource
+        });
+        let styles = {
+            route: new ol.style.Style({
+                stroke: new ol.style.Stroke({
+                    width: 6, color: [40, 40, 40, 0.8]
+                })
+            })
+        };
+        let map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                }),
+                vectorLayer
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([-47.9141, -15.8714]),
+                zoom: 13
+            })
+        });
+
+
         function showRoute(subroutes) {
             for (let i = 0; i < subroutes.length; i++) {
-                console.log(routes[subroutes[i]]);
+                var route = new ol.format.Polyline({
+                    factor: 1e5
+                }).readGeometry(routes[subroutes[i]], {
+                    dataProjection: 'EPSG:4326',
+                    featureProjection: 'EPSG:3857'
+                });
+                var feature = new ol.Feature({
+                    type: 'route',
+                    geometry: route
+                });
+                feature.setStyle(styles.route);
+                vectorSource.addFeature(feature);
             }
         }
 
@@ -54,82 +101,82 @@
         }
 
 
-            function knapsack(inputSet, capacity) {
-                let rows = inputSet.length - 1;
-                let cols = capacity;
+        function knapsack(inputSet, capacity) {
+            let rows = inputSet.length - 1;
+            let cols = capacity;
 
-                let table = [];
-                for (let i = 0; i <= rows; i++) {
-                    table[i] = [];
-                    table[i][0] = 0;
-                }
-                for (let i = 0; i <= cols; i++) {
-                    table[0][i] = 0;
-                }
-                for (let i = 1; i <= rows; i++) {
-                    console.log(i);
-                    for (let w = 1; w <= cols; w++) {
-                        if (inputSet[i].weight > w) {
-                            table[i][w] = table[i - 1][w];
-                        } else {
-                            let prevValue = table[i - 1][w];
-                            let newValue = inputSet[i].value + table[i - 1][w - inputSet[i].weight];
-                            table[i][w] = Math.max(prevValue, newValue);
-                        }
-                    }
-                }
-
-
-                printSolution(inputSet, capacity, table);
+            let table = [];
+            for (let i = 0; i <= rows; i++) {
+                table[i] = [];
+                table[i][0] = 0;
             }
-
-            function printSolution(inputSet, capacity, table) {
-                let solution = [];
-
-                let result = table[inputSet.length - 1][capacity];
-                let weight = capacity;
-
-                for (let i = (inputSet.length - 1); i > 0 && result > 0; i--) {
-                    if (result == table[i - 1][weight]) {
-                        continue;
+            for (let i = 0; i <= cols; i++) {
+                table[0][i] = 0;
+            }
+            for (let i = 1; i <= rows; i++) {
+                console.log(i);
+                for (let w = 1; w <= cols; w++) {
+                    if (inputSet[i].weight > w) {
+                        table[i][w] = table[i - 1][w];
                     } else {
-                        solution.push(inputSet[i]);
-
-                        result = result - inputSet[i].value;
-                        weight = weight - inputSet[i].weight;
+                        let prevValue = table[i - 1][w];
+                        let newValue = inputSet[i].value + table[i - 1][w - inputSet[i].weight];
+                        table[i][w] = Math.max(prevValue, newValue);
                     }
                 }
-
-                console.log(solution);
             }
 
-            window.onload = () => {
-                // let ipt = [
-                //     null,
-                //     {
-                //         value: 1,
-                //         weight: 1
-                //     },
-                //     {
-                //         value: 6,
-                //         weight: 2
-                //     },
-                //     {
-                //         value: 18,
-                //         weight: 5
-                //     },
-                //     {
-                //         value: 22,
-                //         weight: 6
-                //     },
-                //     {
-                //         value: 28,
-                //         weight: 7
-                //     }
-                // ];
-                // console.log(knapsack(ipt, 11));
-                sendGraph();
+
+            printSolution(inputSet, capacity, table);
+        }
+
+        function printSolution(inputSet, capacity, table) {
+            let solution = [];
+
+            let result = table[inputSet.length - 1][capacity];
+            let weight = capacity;
+
+            for (let i = (inputSet.length - 1); i > 0 && result > 0; i--) {
+                if (result == table[i - 1][weight]) {
+                    continue;
+                } else {
+                    solution.push(inputSet[i]);
+
+                    result = result - inputSet[i].value;
+                    weight = weight - inputSet[i].weight;
+                }
             }
+
+            console.log(solution);
+        }
+
+        window.onload = () => {
+            // let ipt = [
+            //     null,
+            //     {
+            //         value: 1,
+            //         weight: 1
+            //     },
+            //     {
+            //         value: 6,
+            //         weight: 2
+            //     },
+            //     {
+            //         value: 18,
+            //         weight: 5
+            //     },
+            //     {
+            //         value: 22,
+            //         weight: 6
+            //     },
+            //     {
+            //         value: 28,
+            //         weight: 7
+            //     }
+            // ];
+            // console.log(knapsack(ipt, 11));
+            sendGraph();
+        }
     </script>
 </body>
 
