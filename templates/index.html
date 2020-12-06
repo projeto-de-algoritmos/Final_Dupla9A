@@ -110,15 +110,15 @@
 
         function reset(){
             startAndGoal = [];
-
             init();
         }
 
         function showRoute(subroutes) {
+            console.log(subroutes);
             for (let i = 0; i < subroutes.length; i++) {
                 if(routes[subroutes[i]] == undefined){
-                    let str = subroutes[i][2] + subroutes[i][3] + subroutes[i][0] + subroutes[i][1];
-                    subroutes[i] = str;
+                    let str = subroutes[i].split("-");
+                    subroutes[i] = str[1]+'-'+str[0];
                 }
                 var route = new ol.format.Polyline({
                     factor: 1e5
@@ -186,7 +186,7 @@
                         city2: g[i].city2,
                         interval: Math.round(json.routes[0].distance)
                     })
-                    let routeId = `${g[i].city1}${g[i].city2}`;
+                    let routeId = `${g[i].city1}-${g[i].city2}`;
                     routes[routeId] = json.routes[0].geometry;
                 });
             }

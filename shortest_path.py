@@ -71,10 +71,10 @@ def create_path(start, goal, graph, socketio):
         node = distances[node]['previous_node']
 
     points.append(goal)
-    ids.append(distances[goal]['previous_node']+goal)
+    ids.append(distances[goal]['previous_node']+'-'+goal)
     for i in range(0, len(path)-1):
         if path[i+1]['previous_node'] is not None:
-            ids.append(path[i+1]['previous_node']+path[i]['previous_node'])
+            ids.append(path[i+1]['previous_node']+'-'+path[i]['previous_node'])
         points.append(path[i]['previous_node'])
     
     socketio.emit('update', {'ids': ids, 'points': points})
