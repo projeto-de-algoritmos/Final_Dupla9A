@@ -9,7 +9,8 @@
     <style>
         .map {
             height: 650px;
-            width: 100%;
+            width: 80%;
+            margin: auto;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.4.3/build/ol.js"></script>
@@ -29,17 +30,19 @@
     <h4>COMO USAR</h4>
     <p>Para utilizar o sistema, escolha no mapa dois pontos, sendo que os pontos vermelhos são as residências
         dos clientes e os demais pontos são os restaurantes. Portanto, escolha uma residência e um
-        restaurante, que são os pontos de origem e de chegada. Clique em Resolver e veja o trajeto mais lucrativo. Veja também os 
+        restaurante, que são os pontos de origem e de chegada. Cada restaurante apresenta uma informação de peso (P) e valor (V). Clique em Resolver e veja o trajeto mais lucrativo. Veja também os 
         ícones verdes que indicam quais são os restaurantes que o entregador deve pegar as comidas para entregar.
         Assim, ele maximizará os seus lucros sem ultrapassar sua capacidade de entrega.
     </p>
     <button onclick="sendGraph()">Resolver</button>
     <button onclick="reset()">Resetar</button>
+    <span id="instructions">Selecione um ponto de partida no mapa.</span>
     <div id="map" class="map"></div>
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
         integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
     <script src="{{ url_for('static', filename='locations.js') }}"></script>
     <script src="{{ url_for('static', filename='graph.js') }}"></script>
+    <script src="{{ url_for('static', filename='routes.js') }}"></script>
     <script type="text/javascript" charset="utf-8">
         let socket = io();
         socket.on('update', function (data) {
@@ -48,7 +51,6 @@
         });
     </script>
     <script>
-        let routes = {};
         let startAndGoal = [];
         let iconUrl = 'http://cdn.rawgit.com/openlayers/ol3/master/examples/data/icon.png';
         let vectorSource = new ol.source.Vector();
@@ -81,7 +83,7 @@
                     radius: 7,
                     fill: new ol.style.Fill({ color: 'black' }),
                     stroke: new ol.style.Stroke({
-                        color: [255, 255, 255], width: 2
+                        color: [0, 0, 255], width: 2
                     })
                 })
             }),
@@ -95,13 +97,24 @@
                 vectorLayer
             ],
             view: new ol.View({
-                center: ol.proj.fromLonLat([-47.9141, -15.8714]),
-                zoom: 12
+                center: ol.proj.fromLonLat([-47.87945693997819, -15.806596831600393]),
+                zoom: 13
             })
         });
 
         var featureListener = function ( event ) {
-            startAndGoal.push(event);
+            if (startAndGoal.length == 1) {
+                if (event[0] === "h" && startAndGoal[0][0] == "h") {
+                    let instruction = document.getElementById("instructions");
+                    instruction.textContent = "Um dos pontos precisa ser um restaurante. Selecione novamente um ponto de chegada."
+                } else {
+                    startAndGoal.push(event);
+                    updateInstructions();
+                }
+            } else {
+                startAndGoal.push(event);
+                updateInstructions();
+            }
         };
 
         map.on('click', function(event) {
@@ -111,6 +124,17 @@
                 }
             });
         });
+
+        function updateInstructions() {
+            let instruction = document.getElementById("instructions");
+            if (startAndGoal.length == 0) {
+                instruction.textContent = "Selecione um ponto de partida no mapa."
+            } else if (startAndGoal.length == 1) {
+                instruction.textContent = "Agora, selecione o ponto de chegada."
+            } else if (startAndGoal.length == 2) {
+                instruction.textContent = "Clique em resolver para gerar a rota."
+            }
+        }
 
         function selectPoints(solutionPoints, locations) {
             let filteredPoints = solutionPoints.map((point) => {
@@ -126,6 +150,7 @@
 
         function reset(){
             startAndGoal = [];
+            updateInstructions();
             init();
         }
 
@@ -137,7 +162,7 @@
                 }
                 var route = new ol.format.Polyline({
                     factor: 1e5
-                }).readGeometry(routes[subroutes[i]], {
+                }).readGeometry(routes[subroutes[i]].geometry, {
                     dataProjection: 'EPSG:4326',
                     featureProjection: 'EPSG:3857'
                 });
@@ -166,7 +191,21 @@
                     geometry: new ol.geom.Point(coords[i])
                 });
                 feature.setId(points[i].id);
-                feature.setStyle(style);
+                if (style === styles.restaurant) {
+                    let textStyle = new ol.style.Style({
+                        text: new ol.style.Text({
+                            text: `P: ${points[i].weight}/V: ${points[i].value}`,
+                            scale: 1.4,
+                            offsetY: 17,
+                            backgroundFill: new ol.style.Fill({ color: 'white' }),
+                            backgroundStroke: new ol.style.Stroke({ color: 'black' }),
+                            padding: [0,1,0,1],
+                        })
+                    });
+                    feature.setStyle([style,textStyle]);
+                } else {
+                    feature.setStyle(style);
+                }
                 vectorSource.addFeature(feature);
             }
         }
@@ -182,28 +221,14 @@
 
         async function buildRoutes() {
             let graph = [];
-            let baseUrl = "http://router.project-osrm.org/route/v1/driving";
             
             for (let i = 0; i < g.length; i++) {
-                let city1 = locations.find((l) => {
-                    return l.id == g[i].city1
-                });
-                let city2 = locations.find((l) => {
-                    return l.id == g[i].city2
-                });
-
-                let url = `${baseUrl}/${city1.lng},${city1.lat};${city2.lng},${city2.lat}`;
-                await fetch(url).then((r) => {
-                    return r.json()
-                }).then((json) => {
-                    graph.push({
-                        city1: g[i].city1,
-                        city2: g[i].city2,
-                        interval: Math.round(json.routes[0].distance)
-                    })
-                    let routeId = `${g[i].city1}-${g[i].city2}`;
-                    routes[routeId] = json.routes[0].geometry;
-                });
+                let routeId = `${g[i].city1}-${g[i].city2}`;
+                graph.push({
+                    city1: g[i].city1,
+                    city2: g[i].city2,
+                    interval: Math.round(routes[routeId].distance)
+                })
             }
             
             return graph;
@@ -225,6 +250,7 @@
 
 
         function knapsack(inputSet, capacity) {
+            inputSet = [null, ...inputSet];
             let rows = inputSet.length - 1;
             let cols = capacity;
 
@@ -267,6 +293,8 @@
             let solution = [];
 
             let result = table[inputSet.length - 1][capacity];
+            let instruction = document.getElementById("instructions");
+            instruction.textContent = "A remuneração máxima para o trajeto é: " + result;
             let weight = capacity;
 
             for (let i = (inputSet.length - 1); i > 0 && result > 0; i--) {
@@ -280,7 +308,9 @@
                 }
             }
 
+
             addSolutionMarkers(solution);
+            
         }
 
         window.onload = () => {
