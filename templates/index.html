@@ -8,7 +8,7 @@
         href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.4.3/css/ol.css" type="text/css">
     <style>
         .map {
-            height: 1000px;
+            height: 650px;
             width: 100%;
         }
     </style>
@@ -16,7 +16,23 @@
 </head>
 
 <body>
-    <h2>My Map</h2>
+    <h2></h2>
+    <h2>DELIVERY OPTIMIZER</h4>
+    <p>Considerando o crescimento do mercado de delivery de comidas, esta aplicação foi construída para que o  
+        entregador tenha maior eficiência no seu trabalho, diminuindo custos e aumentando lucros. Com o Delivery Optimizer,
+        o usuário terá o menor caminho entre dois pontos. O diferencial desta aplicação é que o usuário irá passar por outros 
+        restaurantes, de forma que lucre mais em um trajeto só, deixando de fazer várias idas e vindas.
+        Por exemplo, é melhor ele passar em dois restaurantes que 
+        a compra possui um valor maior, do que em vários os quais as compras possui um valor menor.
+        Além disso, o sistema verifica o que pegar sem ultrapassar a capacidade de sua moto, que é de 30kg.
+    </p>
+    <h4>COMO USAR</h4>
+    <p>Para utilizar o sistema, escolha no mapa dois pontos, sendo que os pontos vermelhos são as residências
+        dos clientes e os demais pontos são os restaurantes. Portanto, escolha uma residência e um
+        restaurante, que são os pontos de origem e de chegada. Clique em Resolver e veja o trajeto mais lucrativo. Veja também os 
+        ícones verdes que indicam quais são os restaurantes que o entregador deve pegar as comidas para entregar.
+        Assim, ele maximizará os seus lucros sem ultrapassar sua capacidade de entrega.
+    </p>
     <button onclick="sendGraph()">Resolver</button>
     <button onclick="reset()">Resetar</button>
     <div id="map" class="map"></div>
@@ -80,7 +96,7 @@
             ],
             view: new ol.View({
                 center: ol.proj.fromLonLat([-47.9141, -15.8714]),
-                zoom: 13
+                zoom: 12
             })
         });
 
@@ -114,7 +130,6 @@
         }
 
         function showRoute(subroutes) {
-            console.log(subroutes);
             for (let i = 0; i < subroutes.length; i++) {
                 if(routes[subroutes[i]] == undefined){
                     let str = subroutes[i].split("-");
@@ -275,3 +290,22 @@
 </body>
 
 </html>
+
+<style>
+button {
+    background-color: #4CAF50;
+    border: none;
+    border-radius: 38px;
+    color: white;
+    padding: 9px 25px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin-bottom: 1%;
+}
+
+h2, p, h4, h1, h3{
+   font-family: Sans-serif;
+}
+</style>
