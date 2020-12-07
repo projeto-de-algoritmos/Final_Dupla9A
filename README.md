@@ -29,8 +29,8 @@ Para a construção do projeto foram utilizados dois algoritmos, sendo um deles 
 ## Instalação 
 **Linguagem**: Python e HTML/JS<br>
   1. Instalar as dependências com `pip install -r requirements.txt`. [Instruções para instalação do Pip, caso já não esteja instalado.](https://pip.pypa.io/en/stable/installing/)
-  2. Executar o comando `python babel_server.py` ou `python3 babel_server.py`. 
-  3. Abrir o navegador e acessar `localhost:5000/babel`
+  2. Executar o comando `python babel_server.py` ou `python3 server.py`. 
+  3. Abrir o navegador e acessar `localhost:5000
 
 ## Uso 
 Para utilizar o sistema, escolha no mapa dois pontos, sendo que os pontos vermelhos são as residências dos clientes e os demais pontos são os restaurantes. Portanto, escolha um restaurante e uma residência, que são os pontos de origem e de chegada. Cada restaurante apresenta uma informação de peso (P) e valor (V). Clique em Resolver e veja o trajeto mais lucrativo. Veja também os ícones verdes que indicam quais são os restaurantes que o entregador deve pegar as comidas para entregar. Assim, ele maximizará os seus lucros sem ultrapassar sua capacidade de entrega.
