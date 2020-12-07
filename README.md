@@ -29,7 +29,7 @@ Para a construção do projeto foram utilizados dois algoritmos, sendo um deles 
 ## Instalação 
 **Linguagem**: Python e HTML/JS<br>
   1. Instalar as dependências com `pip install -r requirements.txt`. [Instruções para instalação do Pip, caso já não esteja instalado.](https://pip.pypa.io/en/stable/installing/)
-  2. Executar o comando `python babel_server.py` ou `python3 server.py`. 
+  2. Executar o comando `python server.py` ou `python3 server.py`. 
   3. Abrir o navegador e acessar `localhost:5000
 
 ## Uso 
